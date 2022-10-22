@@ -17,7 +17,6 @@ from uuid import UUID
 
 from typing_inspect import is_union_type  # type: ignore
 
-from dataclasses_json import cfg
 from dataclasses_json.utils import (_get_type_cons, _get_type_origin,
                                     _handle_undefined_parameters_safe,
                                     _is_collection, _is_mapping, _is_new_type,
@@ -54,11 +53,15 @@ class _ExtendedEncoder(json.JSONEncoder):
         return result
 
 
-def _user_overrides_or_exts(cls):
+def _user_overrides_or_exts(cls, type_codecs: "_GlobalConfig" = None):
+    from dataclasses_json import global_config
+    type_codecs = type_codecs or global_config
+
     global_metadata = defaultdict(dict)
-    encoders = cfg.global_config.encoders
-    decoders = cfg.global_config.decoders
-    mm_fields = cfg.global_config.mm_fields
+
+    encoders = type_codecs.encoders
+    decoders = type_codecs.decoders
+    mm_fields = type_codecs.mm_fields
     for field in fields(cls):
         if field.type in encoders:
             global_metadata[field.name]['encoder'] = encoders[field.type]
@@ -131,10 +134,10 @@ def _decode_letter_case_overrides(field_names, overrides):
     return names
 
 
-def _decode_dataclass(cls, kvs, infer_missing):
+def _decode_dataclass(cls, kvs, infer_missing, type_codecs: "_GlobalConfig" = None):
     if _isinstance_safe(kvs, cls):
         return kvs
-    overrides = _user_overrides_or_exts(cls)
+    overrides = _user_overrides_or_exts(cls, type_codecs)
     kvs = {} if kvs is None and infer_missing else kvs
     field_names = [field.name for field in fields(cls)]
     decode_names = _decode_letter_case_overrides(field_names, overrides)
@@ -199,12 +202,13 @@ def _decode_dataclass(cls, kvs, infer_missing):
                 value = field_value
             else:
                 value = _decode_dataclass(field_type, field_value,
-                                          infer_missing)
+                                          infer_missing, type_codecs)
             init_kwargs[field.name] = value
         elif _is_supported_generic(field_type) and field_type != str:
             init_kwargs[field.name] = _decode_generic(field_type,
                                                       field_value,
-                                                      infer_missing)
+                                                      infer_missing,
+                                                      type_codecs)
         else:
             init_kwargs[field.name] = _support_extended_types(field_type,
                                                               field_value)
@@ -244,7 +248,10 @@ def _is_supported_generic(type_):
         type_) or is_union_type(type_) or is_enum
 
 
-def _decode_generic(type_, value, infer_missing):
+def _decode_generic(type_, value, infer_missing, type_codecs: "_GlobalConfig" = None):
+    from dataclasses_json import global_config
+    type_codecs = type_codecs or global_config
+
     if value is None:
         res = value
     elif _issubclass_safe(type_, Enum):
@@ -257,8 +264,8 @@ def _decode_generic(type_, value, infer_missing):
             k_type, v_type = _get_type_args(type_, (Any, Any))
             # a mapping type has `.keys()` and `.values()`
             # (see collections.abc)
-            ks = _decode_dict_keys(k_type, value.keys(), infer_missing)
-            vs = _decode_items(v_type, value.values(), infer_missing)
+            ks = _decode_dict_keys(k_type, value.keys(), infer_missing, type_codecs)
+            vs = _decode_items(v_type, value.values(), infer_missing, type_codecs)
             xs = zip(ks, vs)
         else:
             xs = _decode_items(_get_type_arg_param(type_, 0),
@@ -278,7 +285,7 @@ def _decode_generic(type_, value, infer_missing):
         elif _is_optional(type_) and len(_args) == 2:  # Optional
             type_arg = _get_type_arg_param(type_, 0)
             if is_dataclass(type_arg) or is_dataclass(value):
-                res = _decode_dataclass(type_arg, value, infer_missing)
+                res = _decode_dataclass(type_arg, value, infer_missing, type_codecs)
             elif _is_supported_generic(type_arg):
                 res = _decode_generic(type_arg, value, infer_missing)
             else:
@@ -288,7 +295,7 @@ def _decode_generic(type_, value, infer_missing):
     return res
 
 
-def _decode_dict_keys(key_type, xs, infer_missing):
+def _decode_dict_keys(key_type, xs, infer_missing, type_codecs: "_GlobalConfig" = None):
     """
     Because JSON object keys must be strs, we need the extra step of decoding
     them back into the user's chosen python type
@@ -312,10 +319,10 @@ def _decode_dict_keys(key_type, xs, infer_missing):
         decode_function = tuple
         key_type = key_type
 
-    return map(decode_function, _decode_items(key_type, xs, infer_missing))
+    return map(decode_function, _decode_items(key_type, xs, infer_missing, type_codecs))
 
 
-def _decode_items(type_arg, xs, infer_missing):
+def _decode_items(type_arg, xs, infer_missing, type_codecs: "_GlobalConfig" = None):
     """
     This is a tricky situation where we need to check both the annotated
     type info (which is usually a type from `typing`) and check the
@@ -325,24 +332,30 @@ def _decode_items(type_arg, xs, infer_missing):
     type_arg is a typevar we need to extract the reified type information
     hence the check of `is_dataclass(vs)`
     """
+    from dataclasses_json import global_config
+    type_codecs = type_codecs or global_config
+
     if is_dataclass(type_arg) or is_dataclass(xs):
-        items = (_decode_dataclass(type_arg, x, infer_missing)
+        items = (_decode_dataclass(type_arg, x, infer_missing, type_codecs)
                  for x in xs)
     elif _is_supported_generic(type_arg):
-        items = (_decode_generic(type_arg, x, infer_missing) for x in xs)
+        items = (_decode_generic(type_arg, x, infer_missing, type_codecs) for x in xs)
     else:
         items = xs
     return items
 
 
-def _asdict(obj, encode_json=False):
+def _asdict(obj, encode_json=False, type_codecs: "_GlobalConfig" = None):
     """
     A re-implementation of `asdict` (based on the original in the `dataclasses`
     source) to support arbitrary Collection and Mapping types.
     """
+    from dataclasses_json import global_config
+    type_codecs = type_codecs or global_config
+
     if _is_dataclass_instance(obj):
         result = []
-        overrides = _user_overrides_or_exts(obj)
+        overrides = _user_overrides_or_exts(obj, type_codecs)
         for field in fields(obj):
             if overrides[field.name].encoder:
                 value = getattr(obj, field.name)
@@ -355,7 +368,7 @@ def _asdict(obj, encode_json=False):
 
         result = _handle_undefined_parameters_safe(cls=obj, kvs=dict(result),
                                                    usage="to")
-        return _encode_overrides(dict(result), _user_overrides_or_exts(obj),
+        return _encode_overrides(dict(result), _user_overrides_or_exts(obj, type_codecs),
                                  encode_json=encode_json)
     elif isinstance(obj, Mapping):
         return dict((_asdict(k, encode_json=encode_json),

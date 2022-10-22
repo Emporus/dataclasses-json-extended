@@ -35,8 +35,9 @@ class DataClassJsonMixin(abc.ABC):
                 separators: Tuple[str, str] = None,
                 default: Callable = None,
                 sort_keys: bool = False,
+                type_codecs: "_GlobalConfig" = None,
                 **kw) -> str:
-        return json.dumps(self.to_dict(encode_json=False),
+        return json.dumps(self.to_dict(encode_json=False, type_codecs=type_codecs),
                           cls=_ExtendedEncoder,
                           skipkeys=skipkeys,
                           ensure_ascii=ensure_ascii,
@@ -56,23 +57,25 @@ class DataClassJsonMixin(abc.ABC):
                   parse_int=None,
                   parse_constant=None,
                   infer_missing=False,
+                  type_codecs: "_GlobalConfig" = None,
                   **kw) -> A:
         kvs = json.loads(s,
                          parse_float=parse_float,
                          parse_int=parse_int,
                          parse_constant=parse_constant,
                          **kw)
-        return cls.from_dict(kvs, infer_missing=infer_missing)
+        return cls.from_dict(kvs, infer_missing=infer_missing, type_codecs=type_codecs)
 
     @classmethod
     def from_dict(cls: Type[A],
                   kvs: Json,
                   *,
-                  infer_missing=False) -> A:
-        return _decode_dataclass(cls, kvs, infer_missing)
+                  infer_missing=False,
+                  type_codecs: "_GlobalConfig" = None) -> A:
+        return _decode_dataclass(cls, kvs, infer_missing=infer_missing, type_codecs=type_codecs)
 
-    def to_dict(self, encode_json=False) -> Dict[str, Json]:
-        return _asdict(self, encode_json=encode_json)
+    def to_dict(self, encode_json=False, type_codecs: "_GlobalConfig" = None) -> Dict[str, Json]:
+        return _asdict(self, encode_json=encode_json, type_codecs=type_codecs)
 
     @classmethod
     def schema(cls: Type[A],

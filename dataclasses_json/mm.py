@@ -276,9 +276,12 @@ def build_type(type_, options, mixin, field, cls):
     return inner(type_, options)
 
 
-def schema(cls, mixin, infer_missing):
+def schema(cls, mixin, infer_missing, type_codecs: "_GlobalConfig" = None):
+    from dataclasses_json import global_config
+    type_codecs = type_codecs or global_config
+
     schema = {}
-    overrides = _user_overrides_or_exts(cls)
+    overrides = _user_overrides_or_exts(cls, type_codecs)
     # TODO check the undefined parameters and add the proper schema action
     #  https://marshmallow.readthedocs.io/en/stable/quickstart.html
     for field in dc_fields(cls):
@@ -331,8 +334,8 @@ def build_schema(cls: typing.Type[A],
                  })
 
     @post_load
-    def make_instance(self, kvs, **kwargs):
-        return _decode_dataclass(cls, kvs, partial)
+    def make_instance(self, kvs, type_codecs: "_GlobalConfig" = None, **kwargs):
+        return _decode_dataclass(cls, kvs, partial, type_codecs=type_codecs)
 
     def dumps(self, *args, **kwargs):
         if 'cls' not in kwargs:
