@@ -1,2 +1,50 @@
-[tool.portray]
-modules = ['dataclasses_json']
+[[tool.poetry.source]]
+name = "emporus-pypi"
+url = "https://emporus-568780636633.d.codeartifact.us-east-1.amazonaws.com/pypi/emporus-pypi/simple/"
+secondary = true
+
+[tool.poetry]
+name = "dataclasses_json_extended"
+version = "0.6"
+description = "Easily serialize dataclasses to and from JSON"
+authors = ["lidatong <charles.dt.li@gmail.com>"]
+repository = "https://github.com/Emporus/emporus-core-data"
+readme = "README.md"
+license = "Proprietary"
+packages = [{ include = "dataclasses_json" }]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+marshmallow = ">=3.3.0,<4.0.0"
+marshmallow-enum = ">=1.5.1,<2.0.0"
+typing-inspect = ">=0.4.0"
+
+
+[tool.poetry.dev-dependencies]
+black = { extras = ["d"], version = "^22.1" }
+bump2version = "^1"
+pdoc = "^12"
+pytest = ">=6.2.3,<7"
+pytest-cov = "^3"
+pytest-mypy = "<1"
+pytest-mccabe = "^2"
+mypy = ">=0.710"
+ipython = "*"
+hypothesis = "*"
+portray = "*"
+flake8 = "*"
+simplejson = "*"
+
+
+[tool.black]
+line-length = 100
+target-version = ["py38"]
+include = '\.pyi?$'
+
+[tool.pytest.ini_options]
+mccabe-complexity = 7
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
