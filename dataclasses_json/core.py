@@ -362,7 +362,8 @@ def _asdict(obj, encode_json=False, type_codecs: "_GlobalConfig" = None):
             else:
                 value = _asdict(
                     getattr(obj, field.name),
-                    encode_json=encode_json
+                    encode_json=encode_json,
+                    type_codecs=type_codecs,
                 )
             result.append((field.name, value))
 
@@ -371,11 +372,11 @@ def _asdict(obj, encode_json=False, type_codecs: "_GlobalConfig" = None):
         return _encode_overrides(dict(result), _user_overrides_or_exts(obj, type_codecs),
                                  encode_json=encode_json)
     elif isinstance(obj, Mapping):
-        return dict((_asdict(k, encode_json=encode_json),
-                     _asdict(v, encode_json=encode_json)) for k, v in
+        return dict((_asdict(k, encode_json=encode_json, type_codecs=type_codecs),
+                     _asdict(v, encode_json=encode_json, type_codecs=type_codecs)) for k, v in
                     obj.items())
     elif isinstance(obj, Collection) and not isinstance(obj, str) \
             and not isinstance(obj, bytes):
-        return list(_asdict(v, encode_json=encode_json) for v in obj)
+        return list(_asdict(v, encode_json=encode_json, type_codecs=type_codecs) for v in obj)
     else:
         return copy.deepcopy(obj)
