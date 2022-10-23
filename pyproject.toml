@@ -5,7 +5,7 @@ secondary = true
 
 [tool.poetry]
 name = "dataclasses_json_extended"
-version = "0.6"
+version = "0.6.1"
 description = "Easily serialize dataclasses to and from JSON"
 authors = ["lidatong <charles.dt.li@gmail.com>"]
 repository = "https://github.com/Emporus/emporus-core-data"
