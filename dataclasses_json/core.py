@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import (Any, Collection, Mapping, Union, get_type_hints,
-                    Tuple, TypeVar)
+                    Tuple, TypeVar, Iterable, Set)
 from uuid import UUID
 
 from typing_inspect import is_union_type  # type: ignore
@@ -375,7 +375,7 @@ def _asdict(obj, encode_json=False, type_codecs: "_GlobalConfig" = None):
         return dict((_asdict(k, encode_json=encode_json, type_codecs=type_codecs),
                      _asdict(v, encode_json=encode_json, type_codecs=type_codecs)) for k, v in
                     obj.items())
-    elif isinstance(obj, Collection) and not isinstance(obj, str) \
+    elif isinstance(obj, (Iterable, Set)) and not isinstance(obj, str) \
             and not isinstance(obj, bytes):
         return list(_asdict(v, encode_json=encode_json, type_codecs=type_codecs) for v in obj)
     else:
