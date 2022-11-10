@@ -379,4 +379,6 @@ def _asdict(obj, encode_json=False, type_codecs: "_GlobalConfig" = None):
             and not isinstance(obj, bytes):
         return list(_asdict(v, encode_json=encode_json, type_codecs=type_codecs) for v in obj)
     else:
+        if obj.__class__ in type_codecs.encoders:
+            return type_codecs.encoders[obj.__class__](obj)
         return copy.deepcopy(obj)
