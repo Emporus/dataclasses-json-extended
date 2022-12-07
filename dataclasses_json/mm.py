@@ -8,6 +8,7 @@ from copy import deepcopy
 from dataclasses import MISSING, is_dataclass, fields as dc_fields
 from datetime import datetime
 from decimal import Decimal
+from typing import Optional
 from uuid import UUID
 from enum import Enum
 
@@ -18,7 +19,9 @@ from marshmallow_enum import EnumField  # type: ignore
 from marshmallow.exceptions import ValidationError
 
 from dataclasses_json.core import (_is_supported_generic, _decode_dataclass,
-                                   _ExtendedEncoder, _user_overrides_or_exts)
+                                   _user_overrides_or_exts)
+from dataclasses_json.serialization import Codecs
+from dataclasses_json.serialization import DefaultJsonCodecs
 from dataclasses_json.utils import (_is_collection, _is_optional,
                                     _issubclass_safe, _timestamp_to_dt_aware,
                                     _is_new_type, _get_type_origin,
@@ -276,12 +279,9 @@ def build_type(type_, options, mixin, field, cls):
     return inner(type_, options)
 
 
-def schema(cls, mixin, infer_missing, type_codecs: "_GlobalConfig" = None):
-    from dataclasses_json import global_config
-    type_codecs = type_codecs or global_config
-
+def schema(cls, mixin, infer_missing, codecs: Codecs  = DefaultJsonCodecs):
     schema = {}
-    overrides = _user_overrides_or_exts(cls, type_codecs)
+    overrides = _user_overrides_or_exts(cls, codecs)
     # TODO check the undefined parameters and add the proper schema action
     #  https://marshmallow.readthedocs.io/en/stable/quickstart.html
     for field in dc_fields(cls):
@@ -322,7 +322,9 @@ def schema(cls, mixin, infer_missing, type_codecs: "_GlobalConfig" = None):
 def build_schema(cls: typing.Type[A],
                  mixin,
                  infer_missing,
-                 partial) -> typing.Type[SchemaType]:
+                 partial,
+                 codecs: Codecs = DefaultJsonCodecs
+                 ) -> typing.Type[SchemaType]:
     Meta = type('Meta',
                 (),
                 {'fields': tuple(field.name for field in dc_fields(cls)
@@ -334,12 +336,12 @@ def build_schema(cls: typing.Type[A],
                  })
 
     @post_load
-    def make_instance(self, kvs, type_codecs: "_GlobalConfig" = None, **kwargs):
-        return _decode_dataclass(cls, kvs, partial, type_codecs=type_codecs)
+    def make_instance(self, kvs, codecs: Optional[Codecs] = None, **kwargs):
+        return _decode_dataclass(cls, kvs, partial, codecs=codecs or DefaultJsonCodecs)
 
     def dumps(self, *args, **kwargs):
         if 'cls' not in kwargs:
-            kwargs['cls'] = _ExtendedEncoder
+            kwargs['cls'] = codecs.encoder
 
         return Schema.dumps(self, *args, **kwargs)
 

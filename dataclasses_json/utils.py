@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 from typing import (Collection, Mapping, Optional, TypeVar, Any, Type, Tuple,
                     Union)
 
+from dataclasses_json.custom_types import B
+from dataclasses_json.custom_types import C
+from dataclasses_json.custom_types import Convert
+
 
 def _get_type_cons(type_):
     """More spaghetti logic for 3.6 vs. 3.7"""
@@ -203,3 +207,15 @@ def _handle_undefined_parameters_safe(cls, kvs, usage: str):
 # Define a type for the CatchAll field
 # https://stackoverflow.com/questions/59360567/define-a-custom-type-that-behaves-like-typing-any
 CatchAllVar = TypeVar("CatchAllVar", bound=Mapping)
+
+
+def optional(cast: Convert[B, C]) -> Convert[Optional[B], Optional[C]]:
+    """
+    Convert non-nullable transformer into nullable transformer
+
+    Args:
+        cast (Convert[A, B]): Simple non-nullable value transformer
+    Returns:
+        Convert[Optional[B], Optional[C]]: Transformer that return None when applied to None
+    """
+    return lambda val: cast(val) if val is not None else None

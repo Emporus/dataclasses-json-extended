@@ -1,14 +1,19 @@
 import functools
 from enum import Enum
-from typing import Callable, Dict, Optional, TypeVar, Union
+from typing import Callable
+from typing import Dict
+from typing import Optional
+from typing import Union
 
 from marshmallow.fields import Field as MarshmallowField
+from dataclasses_json.custom_types import T
 
-from dataclasses_json.stringcase import (camelcase, pascalcase, snakecase,
-                                         spinalcase)  # type: ignore
-from dataclasses_json.undefined import Undefined, UndefinedParameterError
-
-T = TypeVar("T")
+from dataclasses_json.stringcase import camelcase  # type: ignore
+from dataclasses_json.stringcase import pascalcase
+from dataclasses_json.stringcase import snakecase
+from dataclasses_json.stringcase import spinalcase
+from dataclasses_json.undefined import Undefined
+from dataclasses_json.undefined import UndefinedParameterError
 
 
 class Exclude:
@@ -18,30 +23,6 @@ class Exclude:
     """
     ALWAYS: Callable[[T], bool] = lambda _: True
     NEVER: Callable[[T], bool] = lambda _: False
-
-
-# TODO: add warnings?
-class _GlobalConfig:
-
-    def __init__(self):
-        self.encoders: Dict[type, Callable] = {}
-        self.decoders: Dict[type, Callable] = {}
-        self.mm_fields: Dict[type, MarshmallowField] = {}
-        # self._json_module = json
-
-    # TODO: #180
-    # @property
-    # def json_module(self):
-    #     return self._json_module
-    #
-    # @json_module.setter
-    # def json_module(self, value):
-    #     warnings.warn(f"Now using {value.__name__} module to handle JSON. "
-    #                   f"{self._disable_msg}")
-    #     self._json_module = value
-
-
-global_config = _GlobalConfig()
 
 
 class LetterCase(Enum):

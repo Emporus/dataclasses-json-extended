@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 import pytest
 import marshmallow
 
-from dataclasses_json.core import Json
+from dataclasses_json.custom_types import Json
 from dataclasses_json.api import dataclass_json, LetterCase, Undefined, DataClassJsonMixin
 from dataclasses_json import CatchAll
 from dataclasses_json.undefined import UndefinedParameterError

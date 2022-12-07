@@ -1,20 +1,18 @@
 import abc
 import json
-from typing import (Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar,
-                    Union)
+from typing import (Callable, Dict, Optional, Tuple, Type, Union)
 
 from dataclasses_json.cfg import config, LetterCase  # noqa: F401
-from dataclasses_json.core import (Json, _ExtendedEncoder, _asdict,
+from dataclasses_json.core import (_asdict,
                                    _decode_dataclass)
+from dataclasses_json.custom_types import Json
+from dataclasses_json.custom_types import A
 from dataclasses_json.mm import (JsonData, SchemaType, build_schema)
+from dataclasses_json.serialization import Codecs
+from dataclasses_json.serialization import DefaultJsonCodecs
 from dataclasses_json.undefined import Undefined
 from dataclasses_json.utils import (_handle_undefined_parameters_safe,
                                     _undefined_parameter_action_safe)
-
-A = TypeVar('A', bound="DataClassJsonMixin")
-B = TypeVar('B')
-C = TypeVar('C')
-Fields = List[Tuple[str, Any]]
 
 
 class DataClassJsonMixin(abc.ABC):
@@ -35,10 +33,10 @@ class DataClassJsonMixin(abc.ABC):
                 separators: Tuple[str, str] = None,
                 default: Callable = None,
                 sort_keys: bool = False,
-                type_codecs: "_GlobalConfig" = None,
+                codecs: Optional[Codecs] = None,
                 **kw) -> str:
-        return json.dumps(self.to_dict(encode_json=False, type_codecs=type_codecs),
-                          cls=_ExtendedEncoder,
+        return json.dumps(self.to_dict(encode_json=True, codecs=codecs),
+                          cls=codecs.encoder if codecs else DefaultJsonCodecs.encoder,
                           skipkeys=skipkeys,
                           ensure_ascii=ensure_ascii,
                           check_circular=check_circular,
@@ -57,25 +55,27 @@ class DataClassJsonMixin(abc.ABC):
                   parse_int=None,
                   parse_constant=None,
                   infer_missing=False,
-                  type_codecs: "_GlobalConfig" = None,
+                  codecs: Optional[Codecs] = None,
                   **kw) -> A:
         kvs = json.loads(s,
                          parse_float=parse_float,
                          parse_int=parse_int,
                          parse_constant=parse_constant,
                          **kw)
-        return cls.from_dict(kvs, infer_missing=infer_missing, type_codecs=type_codecs)
+        return cls.from_dict(kvs, infer_missing=infer_missing, codecs=codecs)
 
     @classmethod
     def from_dict(cls: Type[A],
                   kvs: Json,
                   *,
                   infer_missing=False,
-                  type_codecs: "_GlobalConfig" = None) -> A:
-        return _decode_dataclass(cls, kvs, infer_missing=infer_missing, type_codecs=type_codecs)
+                  codecs: Optional[Codecs] = None) -> A:
+        return _decode_dataclass(
+            cls, kvs, infer_missing=infer_missing, codecs=codecs or DefaultJsonCodecs
+        )
 
-    def to_dict(self, encode_json=False, type_codecs: "_GlobalConfig" = None) -> Dict[str, Json]:
-        return _asdict(self, encode_json=encode_json, type_codecs=type_codecs)
+    def to_dict(self, encode_json=False, codecs: Optional[Codecs] = None) -> Dict[str, Json]:
+        return _asdict(self, encode_json=encode_json, codecs=codecs or DefaultJsonCodecs)
 
     @classmethod
     def schema(cls: Type[A],
